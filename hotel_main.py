@@ -1,3 +1,4 @@
+import msvcrt
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -38,8 +39,6 @@ def get_headless_driver():
     except Exception as e:
         print("An error occurred:", e)
         return None
-
-import msvcrt
 
 def get_password(prompt="Enter password: "):
     print(prompt, end="", flush=True)
@@ -137,7 +136,6 @@ def inHouseList(driver):
             continue
         arrival_date_text = cells[9].text.strip()
         arrival_date_text = datetime.strptime(arrival_date_text, "%m/%d/%Y").strftime("%m/%d/%Y")
-        print(f"The Arrival Date is : {arrival_date_text}")
         try:
             if arrival_date_text == filter_date_str:
                 room_text = cells[5].text.strip()
@@ -146,7 +144,9 @@ def inHouseList(driver):
         except Exception as e:
             print("No Matching entries found")
     # Sort the room numbers ascending
-    checkin_room_numbers.sort(reverse=True)
+    checkin_room_numbers.sort()
+    print("Printing the values of checkin room numbers:")
+    print(checkin_room_numbers)
 
     print("Filtered and sorted Room Numbers for arrival date", filter_date_str)
     for room in checkin_room_numbers:
