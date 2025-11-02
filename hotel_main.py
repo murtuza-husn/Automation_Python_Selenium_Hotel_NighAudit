@@ -39,10 +39,31 @@ def get_headless_driver():
         print("An error occurred:", e)
         return None
 
+import msvcrt
+
+def get_password(prompt="Enter password: "):
+    print(prompt, end="", flush=True)
+    password = ""
+    while True:
+        ch = msvcrt.getch()
+        if ch in {b'\r', b'\n'}:  # Enter key pressed
+            print("")  # Move to next line
+            break
+        elif ch == b'\x08':  # Backspace
+            if len(password) > 0:
+                password = password[:-1]
+                print("\b \b", end="", flush=True)
+        else:
+            password += ch.decode("utf-8")
+            print("*", end="", flush=True)
+    return password
+
+
+
 def get_credentials(driver):
 
     userName = input("Enter Username : ")
-    password = input("Enter Password : ")
+    password = pwd = get_password()
 
     try:
         driver.get(url)
@@ -56,6 +77,7 @@ def get_credentials(driver):
         WebDriverWait(driver, 25).until(
             EC.presence_of_element_located((By.ID, "infoNews"))
         )
+        print("\nLogin Successful!")
     except Exception as e:
         raise Exception("The Credentials entered are not valid. Please try again.") from e
 
@@ -73,7 +95,7 @@ def todaysCheckedOutGuest(driver):
                 checkedout_room_numbers.append(int(room_text))
 
     checkedout_room_numbers.sort()
-    print("✅ Today's Checked OUt Guest List :")
+    print("Today's Checked OUt Guest List :")
     for room in checkedout_room_numbers:
         print(room)
         checkout_count += 1
@@ -114,6 +136,7 @@ def inHouseList(driver):
         if not cells:
             continue
         arrival_date_text = cells[9].text.strip()
+        arrival_date_text = datetime.strptime(arrival_date_text, "%m/%d/%Y").strftime("%m/%d/%Y")
         print(f"The Arrival Date is : {arrival_date_text}")
         try:
             if arrival_date_text == filter_date_str:
