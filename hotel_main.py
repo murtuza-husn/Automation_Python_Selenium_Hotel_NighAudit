@@ -84,6 +84,7 @@ def get_credentials(driver):
             EC.presence_of_element_located((By.ID, "infoNews"))
         )
         print("\nLogin Successful!")
+        print("\n")
     except Exception as e:
         raise Exception("The Credentials entered are not valid. Please try again.") from e
 
@@ -110,13 +111,9 @@ def todaysCheckedOutGuest(driver):
     for room in checkedout_room_numbers:
         print(f"{num}) {room}")
         num += 1
-    print("\n")
     return checkedout_room_numbers
 
-#Function for Check-In Rooms
-def inHouseList(driver):
-    driver.get(inHouseList_URL)
-    print("\n")
+def todaysDate():
     now = datetime.now()
     current_time = now.time()
 
@@ -134,6 +131,12 @@ def inHouseList(driver):
     # Here I assume arrival dates are in "YYYY-MM-DD" format in the table cells
     filter_date_str = filter_date.strftime("%m/%d/%Y")
     print(f"==> Filtering Date : {filter_date_str}")
+    print("\n")
+    return filter_date_str
+
+#Function for Check-In Rooms
+def inHouseList(driver, filter_date_str):
+    driver.get(inHouseList_URL)
     print("\n")
     # Locate the table body
     tbody = driver.find_element("id", "inHouseList")
@@ -157,14 +160,12 @@ def inHouseList(driver):
             print("No Matching entries found")
     # Sort the room numbers ascending
     checkin_room_numbers.sort()
-    print("Printing the values of checkin room numbers:")
-    print("\n")
 
     print(f"Today's Checked-In Guest List - Arrival Date : {filter_date_str}")
     print("=========================================================")
     for room in checkin_room_numbers:
         arrival_count += 1
-    print(f'The Number of Arrivals for today {filter_date} is : "{arrival_count}"')
+    print(f'The Number of Arrivals for today {filter_date_str} is : "{arrival_count}"')
     num = 1
     for room in checkin_room_numbers:
         print(f"{num}) {room}")
@@ -172,14 +173,20 @@ def inHouseList(driver):
     print("\n")
     return checkin_room_numbers
 
-def vacant_list(checkin_room_numbers, checkedout_room_numbers):
-    print("The Rooms that are Vacant - Not Checked In")
-    vacant_list = []
+def checkedout_but_not_checkedin(checkin_room_numbers, checkedout_room_numbers):
+    print("Rooms that got Checked-Out today, but didnt get Checked-In and are currently vacant :")
+    print("=====================================================================================")
+    checkedout_but_not_checkedin_list = []
     for room in checkedout_room_numbers:
         if room not in checkin_room_numbers:
-            vacant_list.append(room)
-            print(room)
-    return vacant_list
+            checkedout_but_not_checkedin_list.append(room)
+    print(f'The Total no. of CheckedOut Rooms, that are not checked-in and are Vacant are : "{len(checkedout_but_not_checkedin_list)}"')
+    print("Note : The following Rooms will be marked Vacant")
+    num = 1
+    for room in checkedout_but_not_checkedin_list:
+        print(f"{num}) {room}")
+        num += 1
+    print("\n")
 
 rooms_data = {}
 def GuestTracking(driver, checkin_room_numbers):
@@ -290,7 +297,6 @@ def GuestTracking(driver, checkin_room_numbers):
                             #
                             # print(f"Selected Card: {selected_card}")
                             # print(f"Selected Existing Auth: {selected_existing_auth}")
-                            print("\n")
 
                         if plan == "LCITY":
                             estimated_total_cost = "-"
@@ -374,7 +380,6 @@ def GuestTracking(driver, checkin_room_numbers):
 
                         print(f"Selected Card: {selected_card}")
                         print(f"Selected Existing Auth: {selected_existing_auth}")
-                        print("\n\n")
 
                     #wb = Workbook()
                     wb = load_workbook(file_path)
@@ -394,6 +399,7 @@ def GuestTracking(driver, checkin_room_numbers):
                     )
                     break  # Exit rows loop after finding the room
             print(f"Excel file saved at: {file_path}")
+            print("\n")
             if not room_found:
                 print(f"Room {in_room} not found in the current in-house list.")
 
@@ -409,17 +415,13 @@ file_name = "folio_list.xlsx"
 file_path = os.path.join(desktop_path, file_name)
 
 def workfile():
-
     # Create workbook and sheet
     wb = Workbook()
     ws = wb.active
     ws.title = "Room Payments"
-
     headers = ["Room No", "Name", "Plan", "Card Type", "Authorization", "Payment", "Deposit/Refund", "Balance", "Est. Total Cost", "Room Covered"]
     ws.append(headers)
     wb.save(file_path)
-    print(f"Excel file saved at: {file_path}")
-
 
 def retry_guest_tracking(driver, checkin_room_numbers, max_retries=20):
     """
@@ -432,7 +434,7 @@ def retry_guest_tracking(driver, checkin_room_numbers, max_retries=20):
     print("Printing Checkin Guest Details : ")
     print("================================")
     while remaining_rooms and attempt <= max_retries:
-        print(f"\nAttempt #{attempt} for rooms: {remaining_rooms}")
+        print(f" -- Attempt #{attempt} for rooms: {remaining_rooms}\n")
         error_list = GuestTracking(driver, remaining_rooms)
 
         if not error_list:
@@ -449,7 +451,7 @@ def retry_guest_tracking(driver, checkin_room_numbers, max_retries=20):
         print(f"\nAll rooms processed successfully after {attempt} retries!")
 
 def overwrite_workbook():
-
+    pass
 
 def main():
     driver = get_headless_driver()
@@ -458,8 +460,10 @@ def main():
         return
     try:
         get_credentials(driver)
+        todayDate = todaysDate()
         checkedout_rooms = todaysCheckedOutGuest(driver)
-        checkin_rooms = inHouseList(driver)
+        checkin_rooms = inHouseList(driver, todayDate)
+        checkedout_but_not_checkedin(checkin_rooms, checkedout_rooms)
         workfile()
         #vacant_rooms = vacant_list(checkin_rooms, checkedout_rooms)
         retry_guest_tracking(driver, checkin_rooms)
