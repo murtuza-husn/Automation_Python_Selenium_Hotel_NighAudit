@@ -10,12 +10,13 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from datetime import datetime, timedelta, time
 import re
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from datetime import datetime
 import os
 
 # Path to save file on Desktop
-desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+desktop_path = r"C:\Users\econo\Downloads"
+print(desktop_path)
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 url = "https://www.choiceadvantage.com/choicehotels/sign_in.jsp"
 driver_path = r"C:\Program Files (x86)\chromedriver-win64\chromedriver.exe"
@@ -29,11 +30,16 @@ def get_headless_driver():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920x1080")
+    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument("--new-window")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--disable-infobars")
 
     try:
         # Automatically download the correct driver
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=chrome_options)
+        driver.get("https://www.google.com")
         print("Driver loaded successfully!")
         return driver
     except Exception as e:
@@ -66,7 +72,8 @@ def get_credentials(driver):
 
     try:
         driver.get(url)
-        print(driver.title)
+        print("After driver.get() URL is:", driver.current_url)
+        print("Page title is:", driver.title)
         username_field = driver.find_element(By.NAME, "j_username")
         password_field = driver.find_element(By.NAME, "j_password")
         username_field.send_keys(userName)
@@ -94,24 +101,28 @@ def todaysCheckedOutGuest(driver):
                 checkedout_room_numbers.append(int(room_text))
 
     checkedout_room_numbers.sort()
-    print("Today's Checked OUt Guest List :")
+    print("Today's Checked Out Guest List :")
+    print("================================")
     for room in checkedout_room_numbers:
-        print(room)
         checkout_count += 1
-    print(f"The total no of Checked Out guests : {checkout_count}")
+    print(f'The total No. of Checked Out guests : "{checkout_count}"')
+    num = 1
+    for room in checkedout_room_numbers:
+        print(f"{num}) {room}")
+        num += 1
+    print("\n")
     return checkedout_room_numbers
 
 #Function for Check-In Rooms
 def inHouseList(driver):
     driver.get(inHouseList_URL)
     print("\n")
-    print(f"Now Printing the Checked Out Guest List")
     now = datetime.now()
     current_time = now.time()
 
     # Define the window: 12:00 AM to 6:00 AM
     midnight = time(0, 0)
-    six_am = time(6, 0)
+    six_am = time(8, 0)
 
     # Determine filter date
     if midnight <= current_time < six_am:
@@ -122,7 +133,8 @@ def inHouseList(driver):
     # Format filter_date string according to your table date format
     # Here I assume arrival dates are in "YYYY-MM-DD" format in the table cells
     filter_date_str = filter_date.strftime("%m/%d/%Y")
-    print(f"Filtering Date : {filter_date_str}")
+    print(f"==> Filtering Date : {filter_date_str}")
+    print("\n")
     # Locate the table body
     tbody = driver.find_element("id", "inHouseList")
     rows = tbody.find_elements("tag name", "tr")
@@ -146,13 +158,18 @@ def inHouseList(driver):
     # Sort the room numbers ascending
     checkin_room_numbers.sort()
     print("Printing the values of checkin room numbers:")
-    print(checkin_room_numbers)
+    print("\n")
 
-    print("Filtered and sorted Room Numbers for arrival date", filter_date_str)
+    print(f"Today's Checked-In Guest List - Arrival Date : {filter_date_str}")
+    print("=========================================================")
     for room in checkin_room_numbers:
-        print(room)
         arrival_count += 1
-    print(f"The Number of Arrivals for today {filter_date} is : {arrival_count}")
+    print(f'The Number of Arrivals for today {filter_date} is : "{arrival_count}"')
+    num = 1
+    for room in checkin_room_numbers:
+        print(f"{num}) {room}")
+        num += 1
+    print("\n")
     return checkin_room_numbers
 
 def vacant_list(checkin_room_numbers, checkedout_room_numbers):
@@ -165,15 +182,17 @@ def vacant_list(checkin_room_numbers, checkedout_room_numbers):
     return vacant_list
 
 rooms_data = {}
-def GuestTracking(driver, checkin_room_numbers, ws):
+def GuestTracking(driver, checkin_room_numbers):
     error_list = []
     driver.get(inHouseList_URL)
-    WebDriverWait(driver, 3).until(
+    WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "inHouseList"))
     )
 
     for in_room in checkin_room_numbers:
-        print(f"Processing room {in_room}")
+        print(f"This is the value of in_room that is selected : {in_room}")
+        print(f"Processing room {in_room} : ")
+        print("---------------------")
 
         try:
             # Refresh table each loop to avoid stale elements
@@ -190,44 +209,127 @@ def GuestTracking(driver, checkin_room_numbers, ws):
                 room_num = cells[5].text.strip()
                 if room_num.isdigit() and int(room_num) == in_room:
                     room_found = True
-                    name = cells[1].text.strip()
-                    print(f"Opening details for {name} in room {room_num}")
+                    # Default Values :
+                    #name = "-"
+                    #plan = "-"
+                    #estimated_total_cost = "-"
 
                     # Open guest details
+                    name = cells[1].text.strip()
+                    # Clicking the "Name" Link to open Guest Records:
                     element_name = driver.find_element(By.LINK_TEXT, name)
                     element_name.click()
-                    WebDriverWait(driver, 3).until(
+                    WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.ID, "guestFolioEnabled"))
                     )
                     print(f"Guest Name is : {name}")
 
-                    estimated_total_cost = driver.find_element(By.ID, "estimated_total_cost").text
-                    match = re.search(r"\d+(?:\.\d+)?", estimated_total_cost)
-                    if match:
-                        print(f"Estimated Total Cost: {match.group()}")
-                    else:
-                        print("Could not find estimated total cost:", estimated_total_cost)
-
-                    # Check rate plan
+                    # Extract 'Rate plan'
+                    plan = driver.find_element(By.ID, "ratePlan").text
                     plan = driver.find_element(By.ID, "ratePlan").text.strip()
+                    exception_plans = ["SRD", "LCITY"]
                     print(f"Guest Plan: {plan}")
-                    plans_to_skip = ["SRD", "LCITY"]
 
-                    if plan not in plans_to_skip:
+                    if plan in exception_plans:
+                        if plan == "SRD":
+                            estimated_total_cost = "-"
+                            print(f"Estimated Total Cost: {estimated_total_cost}")
+
+                            balance = "-"
+                            print(f"Balance: {balance}")
+
+                            # # Extract 'View Estimated Cost'
+                            # # Get Inside Guest Folio - by clicking link
+                            # driver.find_element(By.ID, "guestFolioEnabled").click()
+                            # WebDriverWait(driver, 10).until(
+                            #     EC.presence_of_element_located((By.ID, "button_12"))
+                            # )
+                            # # Get Inside View Estimated Cost - by clicking link
+                            # driver.find_element(By.ID, "button_12").click()
+                            # table = WebDriverWait(driver, 10).until(
+                            #     EC.presence_of_element_located((By.XPATH, "//table"))
+                            # )
+                            # auth_rows = driver.find_elements(By.XPATH, "//table/tbody/tr")
+                            #
+                            # cards = []
+                            # existing_auths = []
+                            #
+                            # # Extract Card and Existing Auth values for each row
+                            # for authrow in auth_rows:
+                            #     try:
+                            #         card = authrow.find_element(By.XPATH, "./td[4]/p/em").text.strip()  # 4th td = Card
+                            #         existing_auth = authrow.find_element(By.XPATH,
+                            #                                              "./td[8]/p").text.strip()  # 8th td = Existing Auth
+                            #         if existing_auth:  # only consider rows with values
+                            #             existing_auth_value = float(existing_auth)
+                            #             cards.append(card)
+                            #             existing_auths.append(existing_auth_value)
+                            #     except Exception as e:
+                            #         # Skip rows without proper data
+                            #         continue
+                            #
+                            # # Apply the 3-case logic
+                            # selected_card = None
+                            # selected_existing_auth = None
+                            #
+                            # if len(existing_auths) == 1:
+                            #     # Case 1: only one row with a value
+                            #     selected_card = cards[0]
+                            #     selected_existing_auth = existing_auths[0]
+                            # elif 25.00 in existing_auths:
+                            #     # Case 2: one of the rows has 25.00
+                            #     index = existing_auths.index(25.00)
+                            #     selected_card = cards[index]
+                            #     selected_existing_auth = existing_auths[index]
+                            # else:
+                            #     # Case 3: pick the row with the highest Existing Auth value
+                            #     max_value = max(existing_auths)
+                            #     index = existing_auths.index(max_value)
+                            #     selected_card = cards[index]
+                            #     selected_existing_auth = existing_auths[index]
+                            #
+                            # print(f"Selected Card: {selected_card}")
+                            # print(f"Selected Existing Auth: {selected_existing_auth}")
+                            print("\n")
+
+                        if plan == "LCITY":
+                            estimated_total_cost = "-"
+                            balance = "-"
+                            selected_card = "-"
+                            selected_existing_auth = "-"
+                            print(f"Estimated Total Cost: {estimated_total_cost}")
+                            print(f"Balance: {balance}")
+                            print(f"Selected Card: {selected_card}")
+                            print(f"Selected Existing Auth: {selected_existing_auth}")
+
+
+                    # If RatePlan is not SRD-Rate or City-of-Ottawa
+                    else:
+                        estimated_total_cost = "NULL"
+                        estimated_total_cost = driver.find_element(By.ID, "estimated_total_cost").text
+                        match = re.search(r"\d+(?:\.\d+)?", estimated_total_cost)
+                        if match:
+                            estimated_total_cost = match.group()
+                            print(f"Estimated Total Cost: {estimated_total_cost}")
+                        else:
+                            print("Could not find estimated total cost:", estimated_total_cost)
+
+                        # Extract 'Balance'
                         driver.find_element(By.ID, "guestFolioEnabled").click()
-                        WebDriverWait(driver, 3).until(
+                        WebDriverWait(driver, 10).until(
                             EC.presence_of_element_located((By.ID, "button_12"))
                         )
                         balance = driver.find_element(By.ID, "guestFolioBalance").text
                         match = re.search(r"\d+(?:\.\d+)?", balance)
+                        balance = match.group()
                         if match:
-                            print(f"Balance: {match.group()}")
+                            print(f"Balance: {balance}")
                         else:
                             print("Could not find Balance:", balance)
 
-                        # Click 'View Estimated Cost'
+                        # Extract 'View Estimated Cost'
                         driver.find_element(By.ID, "button_12").click()
-                        table = WebDriverWait(driver, 3).until(
+                        table = WebDriverWait(driver, 10).until(
                             EC.presence_of_element_located((By.XPATH, "//table"))
                         )
                         #Authorization and Card
@@ -272,33 +374,26 @@ def GuestTracking(driver, checkin_room_numbers, ws):
 
                         print(f"Selected Card: {selected_card}")
                         print(f"Selected Existing Auth: {selected_existing_auth}")
-                        # file_name = f"{timestamp}.xlsx"
-                        # file_path = os.path.join(desktop_path, file_name)
-                        # wb = Workbook()
-                        # ws = wb.active
-                        row_data = [
-                            in_room,  # In Room
-                            name,  # Name
-                            selected_card,  # Selected Card
-                            selected_existing_auth,  # Selected Existing Card
-                            balance,  # Payment
-                            "",  # Empty column
-                            "",  # Empty column
-                            estimated_total_cost,  # Estimated Total Cost
-                            "COVERED"  # Status
-                        ]
+                        print("\n\n")
 
-                        ws.append(row_data)
-                        # Save the workbook
+                    #wb = Workbook()
+                    wb = load_workbook(file_path)
+                    ws = wb.active
+
+                    values = [in_room, name, plan, selected_card, selected_existing_auth, balance, "",
+                               "", estimated_total_cost, "COVERED"]
+                    ws.append(values)
+                    # Save the workbook
+                    wb.save(file_path)
 
 
                     # After finishing this room, go back to inHouseList page
                     driver.get(inHouseList_URL)
-                    WebDriverWait(driver, 3).until(
+                    WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.ID, "inHouseList"))
                     )
                     break  # Exit rows loop after finding the room
-
+            print(f"Excel file saved at: {file_path}")
             if not room_found:
                 print(f"Room {in_room} not found in the current in-house list.")
 
@@ -309,16 +404,11 @@ def GuestTracking(driver, checkin_room_numbers, ws):
 # def repeat(error_list, max_tries =3):
 #     if len(error_list) != 0:
 #         GuestTracking(driver, error_list)
-def retry_guest_tracking(driver, checkin_room_numbers, max_retries=20):
-    """
-    Repeatedly call GuestTracking on the remaining rooms until no errors or max_retries reached.
-    """
-    error_list = []
-    remaining_rooms = checkin_room_numbers.copy()
-    attempt = 1
 
-    file_name = "october.xlsx"
-    file_path = os.path.join(desktop_path, file_name)
+file_name = "folio_list.xlsx"
+file_path = os.path.join(desktop_path, file_name)
+
+def workfile():
 
     # Create workbook and sheet
     wb = Workbook()
@@ -327,11 +417,23 @@ def retry_guest_tracking(driver, checkin_room_numbers, max_retries=20):
 
     headers = ["Room No", "Name", "Plan", "Card Type", "Authorization", "Payment", "Deposit/Refund", "Balance", "Est. Total Cost", "Room Covered"]
     ws.append(headers)
+    wb.save(file_path)
+    print(f"Excel file saved at: {file_path}")
 
 
+def retry_guest_tracking(driver, checkin_room_numbers, max_retries=20):
+    """
+    Repeatedly call GuestTracking on the remaining rooms until no errors or max_retries reached.
+    """
+    error_list = []
+    remaining_rooms = checkin_room_numbers.copy()
+    attempt = 1
+
+    print("Printing Checkin Guest Details : ")
+    print("================================")
     while remaining_rooms and attempt <= max_retries:
         print(f"\nAttempt #{attempt} for rooms: {remaining_rooms}")
-        error_list = GuestTracking(driver, remaining_rooms, ws)
+        error_list = GuestTracking(driver, remaining_rooms)
 
         if not error_list:
             print("All rooms processed successfully!")
@@ -346,8 +448,8 @@ def retry_guest_tracking(driver, checkin_room_numbers, max_retries=20):
     else:
         print(f"\nAll rooms processed successfully after {attempt} retries!")
 
-    wb.save(file_path)
-    print(f"Excel file saved at: {file_path}")
+def overwrite_workbook():
+
 
 def main():
     driver = get_headless_driver()
@@ -356,9 +458,10 @@ def main():
         return
     try:
         get_credentials(driver)
-        checkin_rooms = inHouseList(driver)
         checkedout_rooms = todaysCheckedOutGuest(driver)
-        vacant_rooms = vacant_list(checkin_rooms, checkedout_rooms)
+        checkin_rooms = inHouseList(driver)
+        workfile()
+        #vacant_rooms = vacant_list(checkin_rooms, checkedout_rooms)
         retry_guest_tracking(driver, checkin_rooms)
 
     finally:
