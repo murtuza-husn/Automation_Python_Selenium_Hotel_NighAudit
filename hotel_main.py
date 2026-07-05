@@ -313,7 +313,7 @@ def GuestTracking(driver, checkin_room_numbers):
                     else:
                         estimated_total_cost = "NULL"
                         estimated_total_cost = driver.find_element(By.ID, "estimated_total_cost").text
-                        match = re.search(r"\d+(?:\.\d+)?", estimated_total_cost)
+                        match = re.search(r"\d[\d,]*(?:\.\d+)?", estimated_total_cost)
                         if match:
                             estimated_total_cost = match.group()
                             print(f"Estimated Total Cost: {estimated_total_cost}")
@@ -351,7 +351,7 @@ def GuestTracking(driver, checkin_room_numbers):
                                 existing_auth = authrow.find_element(By.XPATH,
                                                                  "./td[8]/p").text.strip()  # 8th td = Existing Auth
                                 if existing_auth:  # only consider rows with values
-                                    existing_auth_value = float(existing_auth)
+                                    existing_auth_value = float(existing_auth.replace(",", ""))
                                     cards.append(card)
                                     existing_auths.append(existing_auth_value)
                             except Exception as e:
