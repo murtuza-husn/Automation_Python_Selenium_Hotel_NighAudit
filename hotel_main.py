@@ -333,53 +333,75 @@ def GuestTracking(driver, checkin_room_numbers):
                         else:
                             print("Could not find Balance:", balance)
 
-                        # Extract 'View Estimated Cost'
+                        # Extract 'View Card Details'
                         driver.find_element(By.ID, "button_12").click()
-                        table = WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located((By.XPATH, "//table"))
-                        )
-                        #Authorization and Card
-                        auth_rows = driver.find_elements(By.XPATH, "//table/tbody/tr")
 
-                        cards = []
-                        existing_auths = []
+                        # Default values
+                        selected_card = "-"
+                        selected_existing_auth = "-"
 
-                        # Extract Card and Existing Auth values for each row
-                        for authrow in auth_rows:
-                            try:
-                                card = authrow.find_element(By.XPATH, "./td[4]/p/em").text.strip()  # 4th td = Card
-                                existing_auth = authrow.find_element(By.XPATH,
-                                                                 "./td[8]/p").text.strip()  # 8th td = Existing Auth
-                                if existing_auth:  # only consider rows with values
-                                    existing_auth_value = float(existing_auth.replace(",", ""))
-                                    cards.append(card)
-                                    existing_auths.append(existing_auth_value)
-                            except Exception as e:
-                                # Skip rows without proper data
-                                continue
+                        try:
+                            # Wait specifically for the page title XPath
+                            pageTitle = WebDriverWait(driver, 3).until(
+                                EC.presence_of_element_located(
+                                    (By.XPATH, '//*[@id="mainContent"]/form/div[1]/div/h3')
+                                )
+                            ).get_attribute("textContent").strip()
 
-                        # Apply the 3-case logic
-                        selected_card = None
-                        selected_existing_auth = None
+                            print("Page Title:", pageTitle)
 
-                        if len(existing_auths) == 1:
-                            # Case 1: only one row with a value
-                            selected_card = cards[0]
-                            selected_existing_auth = existing_auths[0]
-                        elif 25.00 in existing_auths:
-                            # Case 2: one of the rows has 25.00
-                            index = existing_auths.index(25.00)
-                            selected_card = cards[index]
-                            selected_existing_auth = existing_auths[index]
-                        else:
-                            # Case 3: pick the row with the highest Existing Auth value
-                            max_value = max(existing_auths)
-                            index = existing_auths.index(max_value)
-                            selected_card = cards[index]
-                            selected_existing_auth = existing_auths[index]
+                            if pageTitle == "Authorization Center":
 
-                        print(f"Selected Card: {selected_card}")
-                        print(f"Selected Existing Auth: {selected_existing_auth}")
+                                # Authorization and Card
+                                auth_rows = driver.find_elements(By.XPATH, "//table/tbody/tr")
+
+                                cards = []
+                                existing_auths = []
+
+                                # Extract Card and Existing Auth values
+                                for authrow in auth_rows:
+                                    try:
+                                        card = authrow.find_element(
+                                            By.XPATH,
+                                            "./td[4]/p/em"
+                                        ).text.strip()
+
+                                        existing_auth = authrow.find_element(
+                                            By.XPATH,
+                                            "./td[8]/p"
+                                        ).text.strip()
+
+                                        if existing_auth:
+                                            existing_auth_value = float(existing_auth.replace(",", ""))
+                                            cards.append(card)
+                                            existing_auths.append(existing_auth_value)
+
+                                    except Exception:
+                                        continue
+
+                                if len(existing_auths) == 1:
+                                    selected_card = cards[0]
+                                    selected_existing_auth = existing_auths[0]
+
+                                elif 25.00 in existing_auths:
+                                    index = existing_auths.index(25.00)
+                                    selected_card = cards[index]
+                                    selected_existing_auth = existing_auths[index]
+
+                                elif existing_auths:
+                                    max_value = max(existing_auths)
+                                    index = existing_auths.index(max_value)
+                                    selected_card = cards[index]
+                                    selected_existing_auth = existing_auths[index]
+
+                                print(f"Selected Card: {selected_card}")
+                                print(f"Selected Existing Auth: {selected_existing_auth}")
+
+
+                        except Exception:
+                            print("Authorization Center not found. Keeping default values.")
+                            print(f"Selected Card: - ")
+                            print(f"Selected Existing Auth: -")
 
                     #wb = Workbook()
                     wb = load_workbook(file_path)
@@ -404,6 +426,7 @@ def GuestTracking(driver, checkin_room_numbers):
                 print(f"Room {in_room} not found in the current in-house list.")
 
         except Exception as e:
+            print(f"ERROR processing room {in_room}: {e}")
             error_list.append(in_room)
     return error_list
 
