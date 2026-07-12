@@ -245,59 +245,6 @@ def GuestTracking(driver, checkin_room_numbers):
                             balance = "-"
                             print(f"Balance: {balance}")
 
-                            # # Extract 'View Estimated Cost'
-                            # # Get Inside Guest Folio - by clicking link
-                            # driver.find_element(By.ID, "guestFolioEnabled").click()
-                            # WebDriverWait(driver, 10).until(
-                            #     EC.presence_of_element_located((By.ID, "button_12"))
-                            # )
-                            # # Get Inside View Estimated Cost - by clicking link
-                            # driver.find_element(By.ID, "button_12").click()
-                            # table = WebDriverWait(driver, 10).until(
-                            #     EC.presence_of_element_located((By.XPATH, "//table"))
-                            # )
-                            # auth_rows = driver.find_elements(By.XPATH, "//table/tbody/tr")
-                            #
-                            # cards = []
-                            # existing_auths = []
-                            #
-                            # # Extract Card and Existing Auth values for each row
-                            # for authrow in auth_rows:
-                            #     try:
-                            #         card = authrow.find_element(By.XPATH, "./td[4]/p/em").text.strip()  # 4th td = Card
-                            #         existing_auth = authrow.find_element(By.XPATH,
-                            #                                              "./td[8]/p").text.strip()  # 8th td = Existing Auth
-                            #         if existing_auth:  # only consider rows with values
-                            #             existing_auth_value = float(existing_auth)
-                            #             cards.append(card)
-                            #             existing_auths.append(existing_auth_value)
-                            #     except Exception as e:
-                            #         # Skip rows without proper data
-                            #         continue
-                            #
-                            # # Apply the 3-case logic
-                            # selected_card = None
-                            # selected_existing_auth = None
-                            #
-                            # if len(existing_auths) == 1:
-                            #     # Case 1: only one row with a value
-                            #     selected_card = cards[0]
-                            #     selected_existing_auth = existing_auths[0]
-                            # elif 25.00 in existing_auths:
-                            #     # Case 2: one of the rows has 25.00
-                            #     index = existing_auths.index(25.00)
-                            #     selected_card = cards[index]
-                            #     selected_existing_auth = existing_auths[index]
-                            # else:
-                            #     # Case 3: pick the row with the highest Existing Auth value
-                            #     max_value = max(existing_auths)
-                            #     index = existing_auths.index(max_value)
-                            #     selected_card = cards[index]
-                            #     selected_existing_auth = existing_auths[index]
-                            #
-                            # print(f"Selected Card: {selected_card}")
-                            # print(f"Selected Existing Auth: {selected_existing_auth}")
-
                         if plan == "LCITY":
                             estimated_total_cost = "-"
                             balance = "-"
