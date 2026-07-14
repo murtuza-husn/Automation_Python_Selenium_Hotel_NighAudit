@@ -11,6 +11,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from datetime import datetime, timedelta, time
 import re
 from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Alignment, Font
 from datetime import datetime
 import os
 
@@ -439,8 +440,38 @@ def retry_guest_tracking(driver, checkin_room_numbers, checkedout_but_not_checke
     else:
         print(f"\nAll rooms processed successfully after {attempt} retries!")
 
-def overwrite_workbook():
-    pass
+def format_excel_file(file_path):
+    """
+    Opens an existing Excel file, applies centre alignment and Arial 11 font size to all the cells,
+    and saves it back to the same path, file_name
+    """
+    if not os.path.exists(file_path):
+        print(f"Error : File - {file_name} not found at : {file_path})")
+        return
+    try:
+        wb = load_workbook(file_path)
+        ws = wb.active
+        arial_font = Font(name = "Arial", size = 11, bold = False)
+        alignment = Alignment(horizontal = "center", vertical = "center")
+
+        #Iterate through every row and column that contains data
+        for row in ws.iter_rows(min_row = 2, max_row = ws.max_row, min_col = 1, max_col = ws.max_column):
+            for cell in row:
+                #cell.font(arial_font)
+                #cell.alignment(alignment)
+                #cell.set_font(arial_font)
+                #cell.set_alignment(alignment)
+
+                #openpyxl way using properties(like setting properties to object)
+                cell.font = arial_font
+                cell.alignment = alignment
+
+        #save the file and save the file with the same file name in same location
+        wb.save(file_path)
+        wb.close()
+        print(f"Folio list is saved at : {file_path}")
+    except Exception as e:
+        print(f"An error occured while formatting the excel file: {e}")
 
 def main():
     driver = get_headless_driver()
@@ -456,6 +487,7 @@ def main():
         workfile()
         #vacant_rooms = vacant_list(checkin_rooms, checkedout_rooms)
         retry_guest_tracking(driver, checkin_room_numbers, checkedout_but_not_checkedin_rooms)
+        format_excel_file(file_path)
 
     finally:
         try:
