@@ -63,8 +63,6 @@ def get_password(prompt="Enter password: "):
             print("*", end="", flush=True)
     return password
 
-
-
 def get_credentials(driver):
 
     userName = input("Enter Username : ")
@@ -187,194 +185,211 @@ def checkedout_but_not_checkedin(checkin_room_numbers, checkedout_room_numbers):
         print(f"{num}) {room}")
         num += 1
     print("\n")
+    return checkedout_but_not_checkedin_list
 
 rooms_data = {}
-def GuestTracking(driver, checkin_room_numbers):
+def GuestTracking(driver, remaining_room_numbers, vacant_room_values):
     error_list = []
     driver.get(inHouseList_URL)
     WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "inHouseList"))
     )
 
-    for in_room in checkin_room_numbers:
+    for in_room in remaining_room_numbers:
         print(f"This is the value of in_room that is selected : {in_room}")
         print(f"Processing room {in_room} : ")
         print("---------------------")
+        if in_room in vacant_room_values:
+            # wb = Workbook()
+            wb = load_workbook(file_path)
+            ws = wb.active
+            name = "VACANT"
+            plan = "-"
+            selected_card = "-"
+            selected_existing_auth = "-"
+            payment= "-"
+            estimated_total_cost = "-"
+            status = "VACANT"
+            values = [in_room, name, plan, selected_card, selected_existing_auth, payment, "",
+                      "", estimated_total_cost, status]
+            ws.append(values)
+            # Save the workbook
+            wb.save(file_path)
+        else:
+            try:
+                # Refresh table each loop to avoid stale elements
+                tbody = driver.find_element(By.ID, "inHouseList")
+                rows = tbody.find_elements(By.TAG_NAME, "tr")
 
-        try:
-            # Refresh table each loop to avoid stale elements
-            tbody = driver.find_element(By.ID, "inHouseList")
-            rows = tbody.find_elements(By.TAG_NAME, "tr")
+                room_found = False
 
-            room_found = False
+                for row in rows:
+                    cells = row.find_elements(By.TAG_NAME, "td")
+                    if not cells:
+                        continue
 
-            for row in rows:
-                cells = row.find_elements(By.TAG_NAME, "td")
-                if not cells:
-                    continue
+                    room_num = cells[5].text.strip()
+                    if room_num.isdigit() and int(room_num) == in_room:
+                        room_found = True
+                        # Default Values :
+                        #name = "-"
+                        #plan = "-"
+                        #estimated_total_cost = "-"
 
-                room_num = cells[5].text.strip()
-                if room_num.isdigit() and int(room_num) == in_room:
-                    room_found = True
-                    # Default Values :
-                    #name = "-"
-                    #plan = "-"
-                    #estimated_total_cost = "-"
-
-                    # Open guest details
-                    name = cells[1].text.strip()
-                    # Clicking the "Name" Link to open Guest Records:
-                    element_name = driver.find_element(By.LINK_TEXT, name)
-                    element_name.click()
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.ID, "guestFolioEnabled"))
-                    )
-                    print(f"Guest Name is : {name}")
-
-                    # Extract 'Rate plan'
-                    plan = driver.find_element(By.ID, "ratePlan").text
-                    plan = driver.find_element(By.ID, "ratePlan").text.strip()
-                    exception_plans = ["SRD", "LCITY"]
-                    print(f"Guest Plan: {plan}")
-
-                    if plan in exception_plans:
-                        if plan == "SRD":
-                            estimated_total_cost = "-"
-                            print(f"Estimated Total Cost: {estimated_total_cost}")
-
-                            balance = "-"
-                            print(f"Balance: {balance}")
-
-                        if plan == "LCITY":
-                            estimated_total_cost = "-"
-                            balance = "-"
-                            selected_card = "-"
-                            selected_existing_auth = "-"
-                            print(f"Estimated Total Cost: {estimated_total_cost}")
-                            print(f"Balance: {balance}")
-                            print(f"Selected Card: {selected_card}")
-                            print(f"Selected Existing Auth: {selected_existing_auth}")
-
-
-                    # If RatePlan is not SRD-Rate or City-of-Ottawa
-                    else:
-                        estimated_total_cost = "NULL"
-                        estimated_total_cost = driver.find_element(By.ID, "estimated_total_cost").text
-                        match = re.search(r"\d[\d,]*(?:\.\d+)?", estimated_total_cost)
-                        if match:
-                            estimated_total_cost = match.group()
-                            print(f"Estimated Total Cost: {estimated_total_cost}")
-                        else:
-                            print("Could not find estimated total cost:", estimated_total_cost)
-
-                        # Extract 'Balance'
-                        driver.find_element(By.ID, "guestFolioEnabled").click()
+                        # Open guest details
+                        name = cells[1].text.strip()
+                        # Clicking the "Name" Link to open Guest Records:
+                        element_name = driver.find_element(By.LINK_TEXT, name)
+                        element_name.click()
                         WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located((By.ID, "button_12"))
+                            EC.presence_of_element_located((By.ID, "guestFolioEnabled"))
                         )
-                        balance = driver.find_element(By.ID, "guestFolioBalance").text
-                        match = re.search(r"\d+(?:\.\d+)?", balance)
-                        balance = match.group()
-                        if match:
-                            print(f"Balance: {balance}")
-                        else:
-                            print("Could not find Balance:", balance)
+                        print(f"Guest Name is : {name}")
 
-                        # Extract 'View Card Details'
-                        driver.find_element(By.ID, "button_12").click()
+                        # Extract 'Rate plan'
+                        plan = driver.find_element(By.ID, "ratePlan").text
+                        plan = driver.find_element(By.ID, "ratePlan").text.strip()
+                        exception_plans = ["SRD", "LCITY"]
+                        print(f"Guest Plan: {plan}")
 
-                        # Default values
-                        selected_card = "-"
-                        selected_existing_auth = "-"
+                        if plan in exception_plans:
+                            if plan == "SRD":
+                                estimated_total_cost = "-"
+                                print(f"Estimated Total Cost: {estimated_total_cost}")
 
-                        try:
-                            # Wait specifically for the page title XPath
-                            pageTitle = WebDriverWait(driver, 3).until(
-                                EC.presence_of_element_located(
-                                    (By.XPATH, '//*[@id="mainContent"]/form/div[1]/div/h3')
-                                )
-                            ).get_attribute("textContent").strip()
+                                balance = "-"
+                                print(f"Balance: {balance}")
 
-                            print("Page Title:", pageTitle)
-
-                            if pageTitle == "Authorization Center":
-
-                                # Authorization and Card
-                                auth_rows = driver.find_elements(By.XPATH, "//table/tbody/tr")
-
-                                cards = []
-                                existing_auths = []
-
-                                # Extract Card and Existing Auth values
-                                for authrow in auth_rows:
-                                    try:
-                                        card = authrow.find_element(
-                                            By.XPATH,
-                                            "./td[4]/p/em"
-                                        ).text.strip()
-
-                                        existing_auth = authrow.find_element(
-                                            By.XPATH,
-                                            "./td[8]/p"
-                                        ).text.strip()
-
-                                        if existing_auth:
-                                            existing_auth_value = float(existing_auth.replace(",", ""))
-                                            cards.append(card)
-                                            existing_auths.append(existing_auth_value)
-
-                                    except Exception:
-                                        continue
-
-                                if len(existing_auths) == 1:
-                                    selected_card = cards[0]
-                                    selected_existing_auth = existing_auths[0]
-
-                                elif 25.00 in existing_auths:
-                                    index = existing_auths.index(25.00)
-                                    selected_card = cards[index]
-                                    selected_existing_auth = existing_auths[index]
-
-                                elif existing_auths:
-                                    max_value = max(existing_auths)
-                                    index = existing_auths.index(max_value)
-                                    selected_card = cards[index]
-                                    selected_existing_auth = existing_auths[index]
-
+                            if plan == "LCITY":
+                                estimated_total_cost = "-"
+                                balance = "-"
+                                selected_card = "-"
+                                selected_existing_auth = "-"
+                                print(f"Estimated Total Cost: {estimated_total_cost}")
+                                print(f"Balance: {balance}")
                                 print(f"Selected Card: {selected_card}")
                                 print(f"Selected Existing Auth: {selected_existing_auth}")
 
 
-                        except Exception:
-                            print("Authorization Center not found. Keeping default values.")
-                            print(f"Selected Card: - ")
-                            print(f"Selected Existing Auth: -")
+                        # If RatePlan is not SRD-Rate or City-of-Ottawa
+                        else:
+                            estimated_total_cost = "NULL"
+                            estimated_total_cost = driver.find_element(By.ID, "estimated_total_cost").text
+                            match = re.search(r"\d[\d,]*(?:\.\d+)?", estimated_total_cost)
+                            if match:
+                                estimated_total_cost = match.group()
+                                print(f"Estimated Total Cost: {estimated_total_cost}")
+                            else:
+                                print("Could not find estimated total cost:", estimated_total_cost)
 
-                    #wb = Workbook()
-                    wb = load_workbook(file_path)
-                    ws = wb.active
+                            # Extract 'Balance'
+                            driver.find_element(By.ID, "guestFolioEnabled").click()
+                            WebDriverWait(driver, 10).until(
+                                EC.presence_of_element_located((By.ID, "button_12"))
+                            )
+                            balance = driver.find_element(By.ID, "guestFolioBalance").text
+                            match = re.search(r"\d+(?:\.\d+)?", balance)
+                            balance = match.group()
+                            if match:
+                                print(f"Balance: {balance}")
+                            else:
+                                print("Could not find Balance:", balance)
 
-                    values = [in_room, name, plan, selected_card, selected_existing_auth, balance, "",
-                               "", estimated_total_cost, "COVERED"]
-                    ws.append(values)
-                    # Save the workbook
-                    wb.save(file_path)
+                            # Extract 'View Card Details'
+                            driver.find_element(By.ID, "button_12").click()
+
+                            # Default values
+                            selected_card = "-"
+                            selected_existing_auth = "-"
+
+                            try:
+                                # Wait specifically for the page title XPath
+                                pageTitle = WebDriverWait(driver, 3).until(
+                                    EC.presence_of_element_located(
+                                        (By.XPATH, '//*[@id="mainContent"]/form/div[1]/div/h3')
+                                    )
+                                ).get_attribute("textContent").strip()
+
+                                print("Page Title:", pageTitle)
+
+                                if pageTitle == "Authorization Center":
+
+                                    # Authorization and Card
+                                    auth_rows = driver.find_elements(By.XPATH, "//table/tbody/tr")
+
+                                    cards = []
+                                    existing_auths = []
+
+                                    # Extract Card and Existing Auth values
+                                    for authrow in auth_rows:
+                                        try:
+                                            card = authrow.find_element(
+                                                By.XPATH,
+                                                "./td[4]/p/em"
+                                            ).text.strip()
+
+                                            existing_auth = authrow.find_element(
+                                                By.XPATH,
+                                                "./td[8]/p"
+                                            ).text.strip()
+
+                                            if existing_auth:
+                                                existing_auth_value = float(existing_auth.replace(",", ""))
+                                                cards.append(card)
+                                                existing_auths.append(existing_auth_value)
+
+                                        except Exception:
+                                            continue
+
+                                    if len(existing_auths) == 1:
+                                        selected_card = cards[0]
+                                        selected_existing_auth = existing_auths[0]
+
+                                    elif 25.00 in existing_auths:
+                                        index = existing_auths.index(25.00)
+                                        selected_card = cards[index]
+                                        selected_existing_auth = existing_auths[index]
+
+                                    elif existing_auths:
+                                        max_value = max(existing_auths)
+                                        index = existing_auths.index(max_value)
+                                        selected_card = cards[index]
+                                        selected_existing_auth = existing_auths[index]
+
+                                    print(f"Selected Card: {selected_card}")
+                                    print(f"Selected Existing Auth: {selected_existing_auth}")
 
 
-                    # After finishing this room, go back to inHouseList page
-                    driver.get(inHouseList_URL)
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.ID, "inHouseList"))
-                    )
-                    break  # Exit rows loop after finding the room
-            print(f"Excel file saved at: {file_path}")
-            print("\n")
-            if not room_found:
-                print(f"Room {in_room} not found in the current in-house list.")
+                            except Exception:
+                                print("Authorization Center not found. Keeping default values.")
+                                print(f"Selected Card: - ")
+                                print(f"Selected Existing Auth: -")
 
-        except Exception as e:
-            print(f"ERROR processing room {in_room}: {e}")
-            error_list.append(in_room)
+                        #wb = Workbook()
+                        wb = load_workbook(file_path)
+                        ws = wb.active
+
+                        values = [in_room, name, plan, selected_card, selected_existing_auth, balance, "",
+                                   "", estimated_total_cost, "COVERED"]
+                        ws.append(values)
+                        # Save the workbook
+                        wb.save(file_path)
+
+
+                        # After finishing this room, go back to inHouseList page
+                        driver.get(inHouseList_URL)
+                        WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.ID, "inHouseList"))
+                        )
+                        break  # Exit rows loop after finding the room
+                print(f"Excel file saved at: {file_path}")
+                print("\n")
+                if not room_found:
+                    print(f"Room {in_room} not found in the current in-house list.")
+
+            except Exception as e:
+                print(f"ERROR processing room {in_room}: {e}")
+                error_list.append(in_room)
     return error_list
 
 # def repeat(error_list, max_tries =3):
@@ -393,19 +408,23 @@ def workfile():
     ws.append(headers)
     wb.save(file_path)
 
-def retry_guest_tracking(driver, checkin_room_numbers, max_retries=20):
+def retry_guest_tracking(driver, checkin_room_numbers, checkedout_but_not_checkedin_rooms, max_retries=20):
     """
     Repeatedly call GuestTracking on the remaining rooms until no errors or max_retries reached.
     """
     error_list = []
     remaining_rooms = checkin_room_numbers.copy()
+    for room in checkedout_but_not_checkedin_rooms:
+        remaining_rooms.append(room)
+    remaining_rooms = list(set(remaining_rooms))
+    remaining_rooms.sort()
     attempt = 1
 
     print("Printing Checkin Guest Details : ")
     print("================================")
     while remaining_rooms and attempt <= max_retries:
         print(f" -- Attempt #{attempt} for rooms: {remaining_rooms}\n")
-        error_list = GuestTracking(driver, remaining_rooms)
+        error_list = GuestTracking(driver, remaining_rooms, checkedout_but_not_checkedin_rooms)
 
         if not error_list:
             print("All rooms processed successfully!")
@@ -432,11 +451,11 @@ def main():
         get_credentials(driver)
         todayDate = todaysDate()
         checkedout_rooms = todaysCheckedOutGuest(driver)
-        checkin_rooms = inHouseList(driver, todayDate)
-        checkedout_but_not_checkedin(checkin_rooms, checkedout_rooms)
+        checkin_room_numbers = inHouseList(driver, todayDate)
+        checkedout_but_not_checkedin_rooms = checkedout_but_not_checkedin(checkin_room_numbers, checkedout_rooms)
         workfile()
         #vacant_rooms = vacant_list(checkin_rooms, checkedout_rooms)
-        retry_guest_tracking(driver, checkin_rooms)
+        retry_guest_tracking(driver, checkin_room_numbers, checkedout_but_not_checkedin_rooms)
 
     finally:
         try:
