@@ -393,10 +393,6 @@ def GuestTracking(driver, remaining_room_numbers, vacant_room_values):
                 error_list.append(in_room)
     return error_list
 
-# def repeat(error_list, max_tries =3):
-#     if len(error_list) != 0:
-#         GuestTracking(driver, error_list)
-
 file_name = "folio_list.xlsx"
 file_path = os.path.join(desktop_path, file_name)
 
