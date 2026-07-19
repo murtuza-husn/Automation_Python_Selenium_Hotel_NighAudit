@@ -221,7 +221,6 @@ def GuestTracking(driver, remaining_room_numbers, vacant_room_values):
                 # Refresh table each loop to avoid stale elements
                 tbody = driver.find_element(By.ID, "inHouseList")
                 rows = tbody.find_elements(By.TAG_NAME, "tr")
-
                 room_found = False
 
                 for row in rows:
@@ -257,7 +256,6 @@ def GuestTracking(driver, remaining_room_numbers, vacant_room_values):
                             if plan == "SRD":
                                 estimated_total_cost = "-"
                                 print(f"Estimated Total Cost: {estimated_total_cost}")
-
                                 balance = "-"
                                 print(f"Balance: {balance}")
 
@@ -270,7 +268,6 @@ def GuestTracking(driver, remaining_room_numbers, vacant_room_values):
                                 print(f"Balance: {balance}")
                                 print(f"Selected Card: {selected_card}")
                                 print(f"Selected Existing Auth: {selected_existing_auth}")
-
 
                         # If RatePlan is not SRD-Rate or City-of-Ottawa
                         else:
@@ -375,7 +372,6 @@ def GuestTracking(driver, remaining_room_numbers, vacant_room_values):
                         ws.append(values)
                         # Save the workbook
                         wb.save(file_path)
-
 
                         # After finishing this room, go back to inHouseList page
                         driver.get(inHouseList_URL)
